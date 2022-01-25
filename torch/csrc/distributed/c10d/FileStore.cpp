@@ -277,9 +277,15 @@ FileStore::FileStore(const std::string& path, int numWorkers)
       numWorkers_(numWorkers),
       cleanupKey_("cleanup/"),
       regularPrefix_("/"),
-      deletePrefix_("-") {}
+      deletePrefix_("-") {
+  // increment world size
+  addHelper(worldSizeKey_, 1);
+}
 
 FileStore::~FileStore() {
+  // decrement world size
+  addHelper(worldSizeKey_, -1);
+
   // If the file does not exist - exit.
   // This can happen when FileStore is invoked from python language which has
   // GC. If python code has directory cleanup procedure, the race condition may
@@ -358,8 +364,13 @@ std::vector<uint8_t> FileStore::get(const std::string& key) {
       const auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(
           std::chrono::steady_clock::now() - start);
       if (timeout_ != kNoTimeout && elapsed > timeout_) {
-          auto err = c10::str("Timeout waiting for key: ", key, " after ", timeout_.count(), " ms");
-          TORCH_CHECK(false, err);
+        auto err = c10::str(
+            "Timeout waiting for key: ",
+            key,
+            " after ",
+            timeout_.count(),
+            " ms");
+        TORCH_CHECK(false, err);
       }
       std::this_thread::sleep_for(std::chrono::milliseconds(10));
       continue;
@@ -455,6 +466,12 @@ void FileStore::wait(
     /* sleep override */
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
+}
+
+int FileStore::getWorldSize() {
+  std::vector<uint8_t> dataVec = get(worldSizeKey_);
+  std::string worldSizeStr(dataVec.begin(), dataVec.end());
+  return std::stoi(worldSizeStr);
 }
 
 } // namespace c10d

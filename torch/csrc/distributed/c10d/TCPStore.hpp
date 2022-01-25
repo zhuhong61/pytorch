@@ -48,7 +48,7 @@ class TORCH_API TCPStore : public Store {
       const std::chrono::milliseconds& timeout = kDefaultTimeout,
       bool waitWorkers = true);
 
-  virtual ~TCPStore();
+  ~TCPStore();
 
   void set(const std::string& key, const std::vector<uint8_t>& value) override;
 
@@ -82,6 +82,8 @@ class TORCH_API TCPStore : public Store {
 
   // Waits for all workers to join.
   void waitForWorkers();
+
+  int getWorldSize() override;
 
   // Returns the hostname used by the TCPStore.
   const std::string& getHost() const noexcept {
