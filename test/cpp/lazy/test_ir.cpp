@@ -79,7 +79,7 @@ TEST(IrTest, MetaDataTest) {
   FLAGS_torch_lazy_ir_debug = restore_FLAGS_torch_lazy_ir_debug;
 }
 
-TEST(IrTest, TsNode) {
+TEST(IrTest, TsNodeTest) {
   NodePtr node1 = MakeNode<TsNode>(
       OpKind(at::aten::view),
       Shape(),
@@ -96,6 +96,11 @@ TEST(IrTest, TsNode) {
 
   const TsNode* leafptr = NodeCast<TsNode>(node1.get(), OpKind(at::aten::view));
   EXPECT_TRUE(leafptr != nullptr);
+}
+
+TEST(IrTest, DynamicShapeTest) {
+// construct a lazy tensor, get its IR value and construct a size node on dim 0, call getStaticValue(), make sure it's equal to the lazy tensor .shape().at(0)
+// construct a lazy tensor, get its IR value and construct two size nodes on dim 0 and dim1, create an SizeAdd node using the two size nodes(), call getStaticValue() and make sure it gives the right answer.
 }
 
 } // namespace lazy
