@@ -126,13 +126,13 @@ TORCH_API std::vector<Tensor> to_functional_tensor(ITensorListRef t_list);
 
 TORCH_API Tensor from_functional_tensor(const Tensor& tensor);
 TORCH_API c10::optional<Tensor> from_functional_tensor(const c10::optional<Tensor>& t);
-TORCH_API c10::List<c10::optional<Tensor>> from_functional_tensor(const c10::List<c10::optional<Tensor>>& t_list);
 TORCH_API std::vector<Tensor> from_functional_tensor(ITensorListRef t_list);
+TORCH_API c10::List<c10::optional<Tensor>> from_functional_tensor(IOptTensorListRef t_list);
 
 TORCH_API void sync(const at::Tensor& t);
 TORCH_API void sync(const c10::optional<Tensor>& t);
-TORCH_API void sync(const c10::List<c10::optional<Tensor>> t_list);
 TORCH_API void sync(ITensorListRef t_list);
+TORCH_API void sync(IOptTensorListRef t_list);
 
 Tensor create_functional_tensor_with_view_meta(const Tensor& view_to_wrap, const Tensor& base, functionalization::ViewMeta meta, int64_t out_idx = 0);
 std::vector<Tensor> create_functional_tensor_with_view_meta(ITensorListRef view_to_wrap, const Tensor& base, functionalization::ViewMeta meta);
