@@ -705,7 +705,7 @@ def emit_body(fn: NativeFunctionWithDifferentiabilityInfo) -> List[str]:
                     expr = f'SavedVariable({var}, {str(is_output).lower()}, {is_inplace_view})'
                 else:
                     expr = f'SavedVariable({var}, {str(is_output).lower()})'
-            elif type == BaseCType(tensorListT) or type == ListCType(OptionalCType(BaseCType(tensorT))) or \
+            elif type == ListCType(OptionalCType(BaseCType(tensorT))) or \
                  type == BaseCType(iTensorListRefT) or type == BaseCType(iOptTensorListRefT):
                 expr = f'make_saved_variable_list({name})'
                 name += '_'
@@ -773,12 +773,10 @@ def emit_body(fn: NativeFunctionWithDifferentiabilityInfo) -> List[str]:
         for unpacked_binding in unpacked_bindings:
             arg = unpacked_binding.name
             noref_cpp_type = unpacked_binding.nctype.type.remove_const_ref()
-            if noref_cpp_type == BaseCType(tensorListT) or noref_cpp_type == BaseCType(iTensorListRefT):
-                if noref_cpp_type == BaseCType(iTensorListRefT):
-                    stmts_before_call += [MATERIALIZE_TENSORLIST.substitute(tensorlist_name=arg)]
-                    tensorlist_name = f"{arg}_materialized"
-                else:
-                    tensorlist_name = arg
+            if noref_cpp_type == BaseCType(iTensorListRefT):
+                stmts_before_call += [MATERIALIZE_TENSORLIST.substitute(tensorlist_name=arg)]
+                tensorlist_name = f"{arg}_materialized"
+
                 stmts_before_call += [SAVE_TENSORLIST_STORAGE.substitute(tensorlist_name=tensorlist_name),
                                       SAVE_TENSORLIST_IMPL.substitute(tensorlist_name=tensorlist_name)]
                 stmts_after_call += [ENFORCE_SAME_TENSORLIST_STORAGE.substitute(tensorlist_name=tensorlist_name),
