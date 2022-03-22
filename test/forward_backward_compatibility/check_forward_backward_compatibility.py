@@ -111,6 +111,7 @@ ALLOW_LIST = [
     ("aten::_transform_bias_rescale_qkv", datetime.date(9999, 1, 1)),
     ("aten::_scatter_reduce.two", datetime.date(9999, 1, 1)),
     ("aten::_s_where", datetime.date(2022, 9, 30)),
+    ("aten::_cat", datetime.date(2022, 5, 15)),
 ]
 
 ALLOW_LIST_COMPILED = [
