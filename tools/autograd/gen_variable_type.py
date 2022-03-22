@@ -175,13 +175,9 @@ MATERIALIZE_OPTIONAL_TENSORLIST = CodeTemplate("""\
 auto ${tensorlist_name}_materialized = ${tensorlist_name}.materialize();
 """)
 
-# See [Note: IOptTensorListRef]
-# 'cpp_list_type' is needed here for supporting code generation using
-# both 'IOptTensorListRef' and 'List<optional<Tensor>>' types.
-# This should be temporary, until we migrate the unstructured.
 SAVE_OPTIONALTENSORLIST_STORAGE = CodeTemplate("""\
 std::vector<c10::optional<Storage>> ${tensorlist_name}_storage_saved(${tensorlist_name}.size());
-for (typename ${cpp_list_type}::value_type tensor : ${tensorlist_name})
+for (const auto& tensor : ${tensorlist_name})
   ${tensorlist_name}_storage_saved.push_back(
     tensor.has_value() && tensor->has_storage() ? c10::optional<Storage>(tensor->storage()) : c10::nullopt);
 """)
@@ -705,8 +701,7 @@ def emit_body(fn: NativeFunctionWithDifferentiabilityInfo) -> List[str]:
                     expr = f'SavedVariable({var}, {str(is_output).lower()}, {is_inplace_view})'
                 else:
                     expr = f'SavedVariable({var}, {str(is_output).lower()})'
-            elif type == ListCType(OptionalCType(BaseCType(tensorT))) or \
-                 type == BaseCType(iTensorListRefT) or type == BaseCType(iOptTensorListRefT):
+            elif type == BaseCType(iTensorListRefT) or type == BaseCType(iOptTensorListRefT):
                 expr = f'make_saved_variable_list({name})'
                 name += '_'
             elif type == BaseCType(intArrayRefT):
@@ -781,14 +776,11 @@ def emit_body(fn: NativeFunctionWithDifferentiabilityInfo) -> List[str]:
                                       SAVE_TENSORLIST_IMPL.substitute(tensorlist_name=tensorlist_name)]
                 stmts_after_call += [ENFORCE_SAME_TENSORLIST_STORAGE.substitute(tensorlist_name=tensorlist_name),
                                      ENFORCE_SAME_TENSORLIST_IMPL.substitute(tensorlist_name=tensorlist_name)]
-            elif noref_cpp_type == ListCType(OptionalCType(BaseCType(tensorT))) or noref_cpp_type == BaseCType(iOptTensorListRefT):
-                if noref_cpp_type == BaseCType(iOptTensorListRefT):
-                    stmts_before_call += [MATERIALIZE_OPTIONAL_TENSORLIST.substitute(tensorlist_name=arg)]
-                    tensorlist_name = f"{arg}_materialized"
-                else:
-                    tensorlist_name = arg
-                stmts_before_call += [SAVE_OPTIONALTENSORLIST_STORAGE.substitute(tensorlist_name=tensorlist_name,
-                                                                                 cpp_list_type=noref_cpp_type),
+            elif noref_cpp_type == BaseCType(iOptTensorListRefT):
+                stmts_before_call += [MATERIALIZE_OPTIONAL_TENSORLIST.substitute(tensorlist_name=arg)]
+                tensorlist_name = f"{arg}_materialized"
+
+                stmts_before_call += [SAVE_OPTIONALTENSORLIST_STORAGE.substitute(tensorlist_name=tensorlist_name),
                                       SAVE_OPTIONALTENSORLIST_IMPL.substitute(tensorlist_name=tensorlist_name)]
                 stmts_after_call += [ENFORCE_SAME_OPTIONALTENSORLIST_STORAGE.substitute(tensorlist_name=tensorlist_name),
                                      ENFORCE_SAME_OPTIONALTENSORLIST_IMPL.substitute(tensorlist_name=tensorlist_name)]
