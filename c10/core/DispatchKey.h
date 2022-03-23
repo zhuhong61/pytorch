@@ -113,6 +113,8 @@ enum class DispatchKey : uint8_t {
   SparseXPU, // For out of tree Intel's heterogeneous computing plug-in
   SparseVE, // For out of tree & closed source integration of SX-Aurora / NEC
 
+  // Dispatch keys for sparse CSR and CSC tensors. A sparse CSR tensor
+  // is a CSC tensor when CsrTranspose is in the set of dispatch keys.
   SparseCsrCPU,
   SparseCsrCUDA,
 
@@ -122,7 +124,7 @@ enum class DispatchKey : uint8_t {
   // DispatchKey]
   // To see some example about how to use this, check out ORT
   PrivateUse1,
-  PrivateUse2,
+  // PrivateUse2,  // TEMPORARILY DISABLED UNTIL gh-72827 LANDS
   PrivateUse3,
 
   // Define an alias key to represent end of backend dispatch keys.
@@ -165,6 +167,11 @@ enum class DispatchKey : uint8_t {
   Negative,
 
   ZeroTensor, // registered at build/aten/src/ATen/RegisterZeroTensor.cpp
+
+  // The CsrTranspose dispatch key is set for any SparseCsr tensor
+  // that is a sparse CSC tensor. Temporarily using PrivateUse1 until
+  // gh-72827 lands.
+  CsrTranspose,
 
   // See Note [Out-of-tree vmap+grad prototype]. The purpose of this key
   // is to insert code after the "autograd subsystem" runs, so this key should
@@ -308,7 +315,7 @@ enum class DispatchKey : uint8_t {
 
   // ~~~~~~~~~~~~~~~~~~~~~~ Alias Dispatch Keys ~~~~~~~~~~~~~~~~~~~~~~~~~~ //
   // Alias dispatch keys are synthetic dispatch keys which map to multiple
-  // runtime dispatch keys. Alisa keys have precedence, but they are always
+  // runtime dispatch keys. Alias keys have precedence, but they are always
   // lower precedence than runtime keys. You can register a kernel to an
   // alias key, the kernel might be populated to the mapped runtime keys
   // during dispatch table computation.
