@@ -808,6 +808,48 @@ class TestTypePromotion(TestCase):
         with self.assertRaisesRegex(RuntimeError, '^Integer division.+is no longer supported+'):
             t.addcdiv_(t, t)
 
+    def test_addcdiv_promotion(self, device):
+        types = (
+            (torch.float64, torch.float64, torch.complex128),
+            (torch.long, torch.bfloat16, torch.float32),
+        )
+
+        for type1, type2, type3 in types:
+            # Cannot use rand with long.
+            if type1 == torch.long:
+                arg1 = torch.randint(7, [5, 5], device=device, dtype=type1)
+            else:
+                arg1 = torch.rand([5, 5], device=device, dtype=type1)
+            arg2 = torch.rand([5, 5], device=device, dtype=type2)
+            arg3 = torch.rand([1, 5], device=device, dtype=type3)
+
+            res1 = torch.addcdiv(arg1, arg2, arg3)
+            res2 = arg1 + arg2 / arg3
+
+            self.assertEqual(res1.dtype, res2.dtype)
+            self.assertEqual(res1, res2)
+
+    def test_addcmul_promotion(self, device):
+        types = (
+            (torch.float64, torch.float64, torch.complex128),
+            (torch.long, torch.bfloat16, torch.float32),
+        )
+
+        for type1, type2, type3 in types:
+            # Cannot use rand with long.
+            if type1 == torch.long:
+                arg1 = torch.randint(7, [5, 5], device=device, dtype=type1)
+            else:
+                arg1 = torch.rand([5, 5], device=device, dtype=type1)
+            arg2 = torch.rand([5, 5], device=device, dtype=type2)
+            arg3 = torch.rand([1, 5], device=device, dtype=type3)
+
+            res1 = torch.addcmul(arg1, arg2, arg3)
+            res2 = arg1 + arg2 * arg3
+
+            self.assertEqual(res1.dtype, res2.dtype)
+            self.assertEqual(res1, res2)
+
     @unittest.skipIf(not TEST_NUMPY, "NumPy not found")
     @float_double_default_dtype
     @onlyCPU
