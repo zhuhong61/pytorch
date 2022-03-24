@@ -6,6 +6,12 @@ C10_DEFINE_bool(ltc_enable_dynamic_shapes, false, "Whether dynamic shape is enab
 namespace torch {
 namespace lazy {
 
+void Node::AddOperand(NodePtr node, size_t index) {
+  CHECK_LT(index, node->num_outputs());
+  operands_.push_back(std::move(node));
+  operands_as_outputs_.emplace_back(operands_.back().get(), index);
+}
+
 size_t Output::Hasher::operator()(const Output& output) const {
   return StdHashCombine(
       reinterpret_cast<std::ptrdiff_t>(output.node), output.index);
@@ -46,21 +52,29 @@ bool Node::enableDynamicShape() {
   return enabled || FLAGS_ltc_enable_dynamic_shapes;
 }
 
-Node::Node(OpKind op, size_t num_outputs, hash_t node_hash, std::function<hash_t(bool)> dag_hash_fn)
+Node::Node(OpKind op, OpList operands, size_t num_outputs, hash_t node_hash, std::function<hash_t(bool)> dag_hash_fn)
     : op_(op),
+      operands_(operands),
       num_outputs_(num_outputs),
       node_hash_(node_hash),
       dag_hash_without_sizes_(dag_hash_fn(false)),
       dag_hash_with_sizes_(dag_hash_fn(true)),
       metadata_(GetMetaDataIfDebugging()) {}
 
-Node::Node(OpKind op, size_t num_outputs, std::function<hash_t(bool)> node_hash_fn)
+Node::Node(OpKind op, size_t num_outputs, hash_t node_hash, std::function<hash_t(bool)> dag_hash_fn)
+    : Node(op, OpList{}, num_outputs, node_hash, dag_hash_fn) {}
+
+Node::Node(OpKind op, OpList operands, size_t num_outputs, std::function<hash_t(bool)> node_hash_fn)
     : op_(op),
+      operands_(operands),
       num_outputs_(num_outputs),
       node_hash_(node_hash_fn(!enableDynamicShape())),
       dag_hash_without_sizes_(node_hash_fn(false)),
       dag_hash_with_sizes_(node_hash_fn(true)),
       metadata_(GetMetaDataIfDebugging()) {}
+
+Node::Node(OpKind op, size_t num_outputs, std::function<hash_t(bool)> node_hash_fn)
+    : Node(op, OpList{}, num_outputs, node_hash_fn) {}
 
 Node::~Node() = default;
 
