@@ -264,12 +264,16 @@ async def _run_clang_tidy(
     # Apply per-file options
     commands = []
     for f in files:
+        print(">>><<< processing file :")
+        print(f)
         command = list(base) + [map_filename(options.compile_commands_dir, f)]
         commands.append((command, f))
 
     if options.dry_run:
         return CommandResult(0, str([c for c, _ in commands]), "")
 
+    print(">>>all commands being execed : ")
+    print(commands)
     return await _run_clang_tidy_in_parallel(commands, options.disable_progress_bar)
 
 
@@ -479,10 +483,16 @@ async def _run(options: Any) -> Tuple[CommandResult, List[ClangTidyWarning]]:
     file_patterns = get_file_patterns(options.glob, options.regex)
     files = list(filter_files(files, file_patterns))
 
+    print("<<<>>> fileslist")
+    print(files)
     # clang-tidy errors when it does not get input files.
     if not files:
         log("No files detected")
         return CommandResult(0, "", ""), []
+
+    print("<<<>>> linefilterslist")
+    line_filters += [{"name": ".h", "lines": [[0, 99]]}]
+    print(line_filters)
 
     result = await _run_clang_tidy(options, line_filters, files)
     fixes, warnings = extract_warnings(
