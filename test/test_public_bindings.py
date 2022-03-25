@@ -1,8 +1,12 @@
+# -*- coding: utf-8 -*-
 # Owner(s): ["module: autograd"]
 
 from torch.testing._internal.common_utils import TestCase, run_tests
-
+import pkgutil
 import torch
+import sys
+from typing import Callable
+import inspect
 
 class TestPublicBindings(TestCase):
     def test_no_new_bindings(self):
@@ -272,6 +276,60 @@ class TestPublicBindings(TestCase):
         msg = f"torch._C had bindings that are not present in the allowlist:\n{difference}"
         self.assertTrue(torch_C_bindings.issubset(torch_C_allowlist_superset), msg)
 
+    def test_correct_module_names(self):
+        '''
+        An API is considered public, if  its  `__module__` starts with `torch.`
+        and there is no name in `__module__` or the object itself that starts with “_”.
+        Each public package should either:
+        - (preferred) Define `__all__` and all callables and classes in there must have their
+         `__module__` start with the current submodule's path. Things not in `__all__` should
+          NOT have their `__module__` start with the current submodule.
+        - (for simple python-only modules) Not define `__all__` and all the elements in `dir(submod)` must have their
+          `__module__` that start with the current submodule.
+        '''
+        failure_list = []
+
+        def test_module(modname):
+            split_strs = modname.split('.')
+            mod = sys.modules.get(modname)
+            for elem in split_strs:
+                if elem.startswith("_"):
+                    return
+
+            # verifies that each API has the correct module name and naming semantics
+            # depending on whether it's public or private
+            def looks_public(elem, modname, mod, private_api):
+                obj = getattr(mod, elem)
+                if not (isinstance(obj, Callable) or inspect.isclass(obj)):
+                    return
+                elem_module = getattr(obj, '__module__', None)
+                elem_modname_starts_with_modname = elem_module is not None and elem_module.startswith(modname)
+                if private_api:
+                    # elem's name must begin with an `_` and it's module name
+                    # should NOT start with it's current module since it's a private API
+                    if elem_modname_starts_with_modname:
+                        failure_list.append((modname, elem, elem_module))
+                else:
+                    # elem's name must NOT begin with an `_` and it's module name
+                    # SHOULD start with it's current module since it's a public API
+                    if elem.startswith('_') and not elem_modname_starts_with_modname:
+                        failure_list.append((modname, elem, elem_module))
+
+            if hasattr(modname, '__all__'):
+                public_api = mod.__all__
+                all_api = dir(modname)
+                for elem in all_api:
+                    looks_public(elem, modname, elem not in public_api)
+            else:
+                all_api = dir(mod)
+                for elem in all_api:
+                    looks_public(elem, modname, mod, elem.startswith('_'))
+
+        for _, modname, ispkg in pkgutil.walk_packages(path=torch.__path__, prefix=torch.__name__ + '.'):
+            test_module(modname)
+
+        test_module('torch')
+        self.assertExpected("\n".join(map(str, failure_list)), 'api_checks')
 
 if __name__ == '__main__':
     run_tests()
