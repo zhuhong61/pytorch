@@ -2,8 +2,12 @@ import zipfile
 from abc import ABC, abstractmethod
 from io import BytesIO
 from ._directory_reader import DirectoryReader
+from ._directory_reader_torchscript import TorchScriptDirectoryReader
 from pathlib import Path
 import os.path
+
+import torch
+from ._directory_reader_torchscript import TorchScriptDirectoryReader
 
 class PackageZipFileReader(ABC):
     """
