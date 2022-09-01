@@ -18,12 +18,15 @@ CUDA_ARCHES = ["10.2", "11.3", "11.6", "11.7"]
 
 ROCM_ARCHES = ["5.1.1", "5.2"]
 
+CPU_CXX11_ABI_ARCH = ['cpu-cxx11-abi']
 
 def arch_type(arch_version: str) -> str:
     if arch_version in CUDA_ARCHES:
         return "cuda"
     elif arch_version in ROCM_ARCHES:
         return "rocm"
+    elif arch_version in CPU_CXX11_ABI_ARCH:
+        return "cpu-cxx11-abi"
     else:  # arch_version should always be "cpu" in this case
         return "cpu"
 
@@ -43,6 +46,7 @@ WHEEL_CONTAINER_IMAGES = {
 CONDA_CONTAINER_IMAGES = {
     **{gpu_arch: f"pytorch/conda-builder:cuda{gpu_arch}" for gpu_arch in CUDA_ARCHES},
     "cpu": "pytorch/conda-builder:cpu",
+    "cpu-cxx11-abi": "pytorch/conda-builder:cpu-cxx11-abi",
 }
 
 PRE_CXX11_ABI = "pre-cxx11"
@@ -77,6 +81,7 @@ FULL_PYTHON_VERSIONS = ["3.7", "3.8", "3.9", "3.10"]
 def translate_desired_cuda(gpu_arch_type: str, gpu_arch_version: str) -> str:
     return {
         "cpu": "cpu",
+        "cpu-cxx11-abi": "cpu-cxx11-abi",
         "cuda": f"cu{gpu_arch_version.replace('.', '')}",
         "rocm": f"rocm{gpu_arch_version}",
     }.get(gpu_arch_type, gpu_arch_version)
@@ -91,7 +96,7 @@ def generate_conda_matrix(os: str) -> List[Dict[str, str]]:
     arches = ["cpu"]
     python_versions = FULL_PYTHON_VERSIONS
     if os == "linux":
-        arches += CUDA_ARCHES
+        arches += CPU_CXX11_ABI_ARCH + CUDA_ARCHES
     elif os == "windows":
         # We don't build CUDA 10.2 for window see https://github.com/pytorch/pytorch/issues/65648
         arches += list_without(CUDA_ARCHES, ["10.2"])
@@ -101,7 +106,7 @@ def generate_conda_matrix(os: str) -> List[Dict[str, str]]:
         # We don't currently build conda packages for rocm
         for arch_version in arches:
             gpu_arch_type = arch_type(arch_version)
-            gpu_arch_version = "" if arch_version == "cpu" else arch_version
+            gpu_arch_version = "" if arch_version == "cpu" or arch_version == "cpu-cxx11-abi" else arch_version
             ret.append(
                 {
                     "python_version": python_version,
